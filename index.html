@@ -1396,66 +1396,55 @@
             }
         }
 
-        function handleRegister(event) {
-            event.preventDefault();
-            
-            const name = document.getElementById('registerName').value.trim();
-            const username = document.getElementById('registerUsername').value.trim();
-            const year = document.getElementById('registerYear').value;
-            const password = document.getElementById('registerPassword').value;
-            
-            if (name && username && year && password) {
-                // Check if username already exists
-                if (academicData.users.find(u => u.username === username)) {
-                    alert('اسم المستخدم موجود بالفعل. يرجى اختيار اسم آخر.');
-                    return;
-                }
-                
-                currentUser = {
-                    id: Date.now().toString(),
-                    username: username,
-                    name: name,
-                    year: parseInt(year),
-                    avatar: name.charAt(0).toUpperCase(),
-                    isAdmin: false,
-                    registrationDate: new Date().toISOString(),
-                    lastLogin: new Date().toISOString(),
-                    status: 'متاح'
-                };
-                
-                // Add to users list
-                academicData.users.push(currentUser);
-                
-                // Initialize user progress, bookmarks, and favorites
-                academicData.userProgress[currentUser.id] = {};
-                academicData.bookmarks[currentUser.id] = [];
-                academicData.favorites[currentUser.id] = [];
-                
-                // Log activity
-                logActivity('register', `تسجيل مستخدم جديد: ${username}`);
-                
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                saveData();
-                
-                closeModal('registerModal');
-                showMainPlatform();
-                showWelcomePopup(name);
-            }
-        }
+    async function handleRegister(event) {
+    event.preventDefault();
 
-        function handleLogout() {
-            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                currentUser = null;
-                localStorage.removeItem('currentUser');
-                
-                document.getElementById('homePage').classList.remove('hidden');
-                document.getElementById('mainPlatform').classList.add('hidden');
-                
-                // Reset forms
-                document.getElementById('loginForm').reset();
-                document.getElementById('registerForm').reset();
-            }
+    const name = document.getElementById('registerName').value.trim();
+    const username = document.getElementById('registerUsername').value.trim();
+    const year = document.getElementById('registerYear').value;
+    const password = document.getElementById('registerPassword').value;
+
+    if (name && username && year && password) {
+        try {
+            // تسجيل المستخدم في Firebase Auth
+            const userCredential = await createUserWithEmailAndPassword(auth, username + "@vet.com", password);
+            const user = userCredential.user;
+
+            // تخزين بيانات المستخدم في Firestore
+            await addDoc(collection(db, "users"), {
+                uid: user.uid,
+                name: name,
+                username: username,
+                year: parseInt(year),
+                isAdmin: false,
+                status: 'متاح',
+                registrationDate: new Date().toISOString(),
+                lastLogin: new Date().toISOString()
+            });
+
+            // تعيين currentUser مؤقتًا لعرض البوب أب
+            currentUser = {
+                uid: user.uid,
+                username: username,
+                name: name,
+                year: parseInt(year),
+                avatar: name.charAt(0).toUpperCase(),
+                isAdmin: false,
+            };
+
+            // تسجيل النشاط لو تحب
+            logActivity('register', `تسجيل مستخدم جديد: ${username}`);
+
+            alert("✅ تم التسجيل بنجاح");
+            closeModal('registerModal');  
+            showMainPlatform();  
+            showWelcomePopup(currentUser.name);
+
+        } catch (error) {
+            alert("❌ خطأ: " + error.message);
         }
+    }
+}
 
         function showMainPlatform() {
             document.getElementById('homePage').classList.add('hidden');
