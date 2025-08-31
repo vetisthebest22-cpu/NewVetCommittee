@@ -2555,171 +2555,169 @@
                 </div>
             `;
         }
+// Posts Collection: "posts"
+// Chat Collection: "chats/{chatId}/messages"
 
-        // Post interaction functions
-        function likePost(postId) {
-            const post = academicData.posts.find(p => p.id === postId);
-            if (!post) return;
-            
-            if (!post.likedBy) post.likedBy = [];
-            
-            const userIndex = post.likedBy.indexOf(currentUser.id);
-            if (userIndex > -1) {
-                // Unlike
-                post.likedBy.splice(userIndex, 1);
-                post.likes = Math.max(0, (post.likes || 0) - 1);
-            } else {
-                // Like
-                post.likedBy.push(currentUser.id);
-                post.likes = (post.likes || 0) + 1;
-            }
-            
-            saveData();
-            loadPosts(); // Refresh posts
-            logActivity('post_like', `تفاعل مع منشور: ${postId}`);
-        }
+import { doc, getDoc, updateDoc, addDoc, arrayUnion, arrayRemove, deleteDoc, collection, getDocs, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        function voteInPoll(postId, optionIndex) {
-            const post = academicData.posts.find(p => p.id === postId);
-            if (!post || !post.pollOptions) return;
-            
-            // Check if user already voted
-            const alreadyVoted = post.pollOptions.some(option => 
-                option.voters && option.voters.includes(currentUser.id)
-            );
-            
-            if (alreadyVoted) {
-                alert('لقد صوتت بالفعل في هذا الاستطلاع');
-                return;
-            }
-            
-            // Add vote
-            if (!post.pollOptions[optionIndex].voters) {
-                post.pollOptions[optionIndex].voters = [];
-            }
-            
-            post.pollOptions[optionIndex].voters.push(currentUser.id);
-            post.pollOptions[optionIndex].votes = (post.pollOptions[optionIndex].votes || 0) + 1;
-            
-            saveData();
-            loadPosts(); // Refresh posts
-            logActivity('poll_vote', `تصويت في استطلاع: ${postId}`);
-        }
+// Load posts from Firestore
+async function loadPosts() {
+    const postsCol = collection(db, "posts");
+    const q = query(postsCol, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    const postsContainer = document.getElementById('postsContainer');
+    postsContainer.innerHTML = '';
 
-        function toggleComments(postId) {
-            const commentsSection = document.getElementById(`comments-${postId}`);
-            commentsSection.classList.toggle('hidden');
-        }
+    snapshot.forEach(docSnap => {
+        const post = docSnap.data();
+        post.id = docSnap.id;
+        const postHTML = createPostHTML(post);
+        postsContainer.appendChild(postHTML);
+    });
+}
 
-        function addComment(postId) {
-            const input = document.getElementById(`comment-input-${postId}`);
-            const content = input.value.trim();
-            
-            if (!content) return;
-            
-            const post = academicData.posts.find(p => p.id === postId);
-            if (!post) return;
-            
-            if (!post.comments) post.comments = [];
-            
-            const comment = {
-                id: Date.now().toString(),
-                content: content,
-                author: currentUser.name,
-                authorId: currentUser.id,
-                authorAvatar: currentUser.avatar,
-                authorProfilePicture: currentUser.profilePicture,
-                date: new Date().toLocaleDateString('ar-SA'),
-                timestamp: new Date().toISOString()
-            };
-            
-            post.comments.push(comment);
-            saveData();
-            
-            // Update comments display
-            const commentsList = document.getElementById(`comments-list-${postId}`);
-            commentsList.innerHTML += createCommentHTML(comment);
-            
-            input.value = '';
-            logActivity('comment_add', `تعليق على منشور: ${postId}`);
-        }
+// Like/unlike a post
+async function likePost(postId) {
+    const postRef = doc(db, "posts", postId);
+    const postSnap = await getDoc(postRef);
+    if (!postSnap.exists()) return;
+    const post = postSnap.data();
 
-        function sharePost(postId) {
-            // Simple share functionality
-            const post = academicData.posts.find(p => p.id === postId);
-            if (!post) return;
-            
-            const shareText = `${post.content}\n\n- ${post.author}\nمن المنصة الأكاديمية - لجنة الطب والجراحة البيطرية`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: 'منشور من المنصة الأكاديمية',
-                    text: shareText
-                });
-            } else {
-                // Fallback: copy to clipboard
-                navigator.clipboard.writeText(shareText).then(() => {
-                    alert('تم نسخ المنشور للحافظة!');
-                });
-            }
-            
-            logActivity('post_share', `مشاركة منشور: ${postId}`);
-        }
+    if (!post.likedBy) post.likedBy = [];
 
-        function deletePost(postId) {
-            if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
-                academicData.posts = academicData.posts.filter(p => p.id !== postId);
-                saveData();
-                loadPosts();
-                logActivity('post_delete', `حذف منشور: ${postId}`);
-            }
-        }
+    if (post.likedBy.includes(currentUser.uid)) {
+        // Unlike
+        await updateDoc(postRef, {
+            likedBy: arrayRemove(currentUser.uid),
+            likes: (post.likes || 1) - 1
+        });
+    } else {
+        // Like
+        await updateDoc(postRef, {
+            likedBy: arrayUnion(currentUser.uid),
+            likes: (post.likes || 0) + 1
+        });
+    }
 
-        // Chat functions
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            
-            if (message) {
-                const messagesContainer = document.getElementById('chatMessages');
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'flex items-start space-x-3 space-x-reverse justify-end';
-                
-                messageDiv.innerHTML = `
-                    <div class="bg-purple-600 text-white rounded-lg p-3 max-w-xs">
-                        <div class="text-sm font-medium">${currentUser.name}</div>
-                        <div class="text-sm">${message}</div>
-                        <div class="text-xs opacity-75 mt-1">${new Date().toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'})}</div>
-                    </div>
-                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
-                        ${currentUser.avatar}
-                    </div>
-                `;
-                
-                messagesContainer.appendChild(messageDiv);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                
-                input.value = '';
-                
-                // Simulate admin response (in real app, this would be real-time)
-                setTimeout(() => {
-                    const adminResponse = document.createElement('div');
-                    adminResponse.className = 'flex items-start space-x-3 space-x-reverse';
-                    adminResponse.innerHTML = `
-                        <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                            إ
-                        </div>
-                        <div class="bg-purple-100 rounded-lg p-3 max-w-xs">
-                            <div class="text-sm font-medium text-purple-900">الإدارة</div>
-                            <div class="text-sm text-purple-700">شكراً لتواصلك معنا. سنقوم بالرد عليك في أقرب وقت ممكن.</div>
-                            <div class="text-xs text-purple-500 mt-1">${new Date().toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'})}</div>
-                        </div>
-                    `;
-                    messagesContainer.appendChild(adminResponse);
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }, 2000);
-            }
-        }
+    logActivity('post_like', `تفاعل مع منشور: ${postId}`);
+    loadPosts();
+}
+
+// Vote in poll
+async function voteInPoll(postId, optionIndex) {
+    const postRef = doc(db, "posts", postId);
+    const postSnap = await getDoc(postRef);
+    if (!postSnap.exists()) return;
+    const post = postSnap.data();
+
+    const alreadyVoted = post.pollOptions?.some(option => option.voters?.includes(currentUser.uid));
+    if (alreadyVoted) {
+        alert('لقد صوتت بالفعل في هذا الاستطلاع');
+        return;
+    }
+
+    const votersPath = `pollOptions.${optionIndex}.voters`;
+    const votesPath = `pollOptions.${optionIndex}.votes`;
+    await updateDoc(postRef, {
+        [votersPath]: arrayUnion(currentUser.uid),
+        [votesPath]: (post.pollOptions[optionIndex].votes || 0) + 1
+    });
+
+    logActivity('poll_vote', `تصويت في استطلاع: ${postId}`);
+    loadPosts();
+}
+
+// Add comment
+async function addComment(postId) {
+    const input = document.getElementById(`comment-input-${postId}`);
+    const content = input.value.trim();
+    if (!content) return;
+
+    const postRef = doc(db, "posts", postId);
+    const postSnap = await getDoc(postRef);
+    if (!postSnap.exists()) return;
+
+    const comment = {
+        id: Date.now().toString(),
+        content: content,
+        author: currentUser.name,
+        authorId: currentUser.uid,
+        authorAvatar: currentUser.avatar,
+        date: new Date().toLocaleDateString('ar-SA'),
+        timestamp: new Date().toISOString()
+    };
+
+    await updateDoc(postRef, {
+        comments: arrayUnion(comment)
+    });
+
+    logActivity('comment_add', `تعليق على منشور: ${postId}`);
+    input.value = '';
+    loadPosts();
+}
+
+// Delete post
+async function deletePost(postId) {
+    if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
+        await deleteDoc(doc(db, "posts", postId));
+        logActivity('post_delete', `حذف منشور: ${postId}`);
+        loadPosts();
+    }
+}
+
+// Send chat message
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message) return;
+
+    const chatId = "globalChat"; // مثال: دردشة عامة
+    const messagesCol = collection(db, "chats", chatId, "messages");
+
+    await addDoc(messagesCol, {
+        senderId: currentUser.uid,
+        senderName: currentUser.name,
+        senderAvatar: currentUser.avatar,
+        message: message,
+        timestamp: new Date().toISOString()
+    });
+
+    input.value = '';
+    logActivity('chat_message', `أرسل رسالة: ${message}`);
+}
+
+// Listen for chat messages (real-time)
+function listenChat() {
+    const chatId = "globalChat";
+    const messagesCol = collection(db, "chats", chatId, "messages");
+    const q = query(messagesCol, orderBy("timestamp", "asc"));
+
+    onSnapshot(q, snapshot => {
+        const messagesContainer = document.getElementById('chatMessages');
+        messagesContainer.innerHTML = '';
+        snapshot.forEach(docSnap => {
+            const msg = docSnap.data();
+            const messageDiv = document.createElement('div');
+            messageDiv.className = msg.senderId === currentUser.uid
+                ? 'flex items-start space-x-3 space-x-reverse justify-end'
+                : 'flex items-start space-x-3 space-x-reverse';
+
+            messageDiv.innerHTML = `
+                <div class="${msg.senderId === currentUser.uid ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'} rounded-lg p-3 max-w-xs">
+                    <div class="text-sm font-medium">${msg.senderName}</div>
+                    <div class="text-sm">${msg.message}</div>
+                    <div class="text-xs mt-1 opacity-75">${new Date(msg.timestamp).toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'})}</div>
+                </div>
+                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
+                    ${msg.senderAvatar}
+                </div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+        });
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
+}
+
 
         // Logo functions
         function showLogoSettings() {
