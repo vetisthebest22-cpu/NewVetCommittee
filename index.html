@@ -6,39 +6,6 @@
     <title>المنصة الأكاديمية - لجنة الطب والجراحة البيطرية</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- 🔥 سكربت Firebase -->
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-      import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-      import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-      // ⚠️ غيّر القيم من Firebase Console
-      const firebaseConfig = {
-        apiKey: "YOUR-API-KEY",
-        authDomain: "YOUR-PROJECT.firebaseapp.com",
-        projectId: "YOUR-PROJECT-ID",
-        storageBucket: "YOUR-PROJECT.appspot.com",
-        messagingSenderId: "SENDER-ID",
-        appId: "APP-ID"
-      };
-
-      // تهيئة Firebase
-      const app = initializeApp(firebaseConfig);
-      const db = getFirestore(app);
-      const auth = getAuth(app);
-
-      // نخليهم متاحين لباقي الكود
-      window.db = db;
-      window.auth = auth;
-      window.addDoc = addDoc;
-      window.collection = collection;
-      window.getDocs = getDocs;
-      window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-      window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-    </script>
-    <!-- 🔥 انتهى سكربت Firebase -->
-
-    <!-- كود Tailwind Theme -->
     <script>
         tailwind.config = {
             theme: {
@@ -1396,55 +1363,66 @@
             }
         }
 
-    async function handleRegister(event) {
-    event.preventDefault();
-
-    const name = document.getElementById('registerName').value.trim();
-    const username = document.getElementById('registerUsername').value.trim();
-    const year = document.getElementById('registerYear').value;
-    const password = document.getElementById('registerPassword').value;
-
-    if (name && username && year && password) {
-        try {
-            // تسجيل المستخدم في Firebase Auth
-            const userCredential = await createUserWithEmailAndPassword(auth, username + "@vet.com", password);
-            const user = userCredential.user;
-
-            // تخزين بيانات المستخدم في Firestore
-            await addDoc(collection(db, "users"), {
-                uid: user.uid,
-                name: name,
-                username: username,
-                year: parseInt(year),
-                isAdmin: false,
-                status: 'متاح',
-                registrationDate: new Date().toISOString(),
-                lastLogin: new Date().toISOString()
-            });
-
-            // تعيين currentUser مؤقتًا لعرض البوب أب
-            currentUser = {
-                uid: user.uid,
-                username: username,
-                name: name,
-                year: parseInt(year),
-                avatar: name.charAt(0).toUpperCase(),
-                isAdmin: false,
-            };
-
-            // تسجيل النشاط لو تحب
-            logActivity('register', `تسجيل مستخدم جديد: ${username}`);
-
-            alert("✅ تم التسجيل بنجاح");
-            closeModal('registerModal');  
-            showMainPlatform();  
-            showWelcomePopup(currentUser.name);
-
-        } catch (error) {
-            alert("❌ خطأ: " + error.message);
+        function handleRegister(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('registerName').value.trim();
+            const username = document.getElementById('registerUsername').value.trim();
+            const year = document.getElementById('registerYear').value;
+            const password = document.getElementById('registerPassword').value;
+            
+            if (name && username && year && password) {
+                // Check if username already exists
+                if (academicData.users.find(u => u.username === username)) {
+                    alert('اسم المستخدم موجود بالفعل. يرجى اختيار اسم آخر.');
+                    return;
+                }
+                
+                currentUser = {
+                    id: Date.now().toString(),
+                    username: username,
+                    name: name,
+                    year: parseInt(year),
+                    avatar: name.charAt(0).toUpperCase(),
+                    isAdmin: false,
+                    registrationDate: new Date().toISOString(),
+                    lastLogin: new Date().toISOString(),
+                    status: 'متاح'
+                };
+                
+                // Add to users list
+                academicData.users.push(currentUser);
+                
+                // Initialize user progress, bookmarks, and favorites
+                academicData.userProgress[currentUser.id] = {};
+                academicData.bookmarks[currentUser.id] = [];
+                academicData.favorites[currentUser.id] = [];
+                
+                // Log activity
+                logActivity('register', `تسجيل مستخدم جديد: ${username}`);
+                
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                saveData();
+                
+                closeModal('registerModal');
+                showMainPlatform();
+                showWelcomePopup(name);
+            }
         }
-    }
-}
+
+        function handleLogout() {
+            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                currentUser = null;
+                localStorage.removeItem('currentUser');
+                
+                document.getElementById('homePage').classList.remove('hidden');
+                document.getElementById('mainPlatform').classList.add('hidden');
+                
+                // Reset forms
+                document.getElementById('loginForm').reset();
+                document.getElementById('registerForm').reset();
+            }
+        }
 
         function showMainPlatform() {
             document.getElementById('homePage').classList.add('hidden');
@@ -2555,169 +2533,171 @@
                 </div>
             `;
         }
-// Posts Collection: "posts"
-// Chat Collection: "chats/{chatId}/messages"
 
-import { doc, getDoc, updateDoc, addDoc, arrayUnion, arrayRemove, deleteDoc, collection, getDocs, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // Post interaction functions
+        function likePost(postId) {
+            const post = academicData.posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            if (!post.likedBy) post.likedBy = [];
+            
+            const userIndex = post.likedBy.indexOf(currentUser.id);
+            if (userIndex > -1) {
+                // Unlike
+                post.likedBy.splice(userIndex, 1);
+                post.likes = Math.max(0, (post.likes || 0) - 1);
+            } else {
+                // Like
+                post.likedBy.push(currentUser.id);
+                post.likes = (post.likes || 0) + 1;
+            }
+            
+            saveData();
+            loadPosts(); // Refresh posts
+            logActivity('post_like', `تفاعل مع منشور: ${postId}`);
+        }
 
-// Load posts from Firestore
-async function loadPosts() {
-    const postsCol = collection(db, "posts");
-    const q = query(postsCol, orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    const postsContainer = document.getElementById('postsContainer');
-    postsContainer.innerHTML = '';
+        function voteInPoll(postId, optionIndex) {
+            const post = academicData.posts.find(p => p.id === postId);
+            if (!post || !post.pollOptions) return;
+            
+            // Check if user already voted
+            const alreadyVoted = post.pollOptions.some(option => 
+                option.voters && option.voters.includes(currentUser.id)
+            );
+            
+            if (alreadyVoted) {
+                alert('لقد صوتت بالفعل في هذا الاستطلاع');
+                return;
+            }
+            
+            // Add vote
+            if (!post.pollOptions[optionIndex].voters) {
+                post.pollOptions[optionIndex].voters = [];
+            }
+            
+            post.pollOptions[optionIndex].voters.push(currentUser.id);
+            post.pollOptions[optionIndex].votes = (post.pollOptions[optionIndex].votes || 0) + 1;
+            
+            saveData();
+            loadPosts(); // Refresh posts
+            logActivity('poll_vote', `تصويت في استطلاع: ${postId}`);
+        }
 
-    snapshot.forEach(docSnap => {
-        const post = docSnap.data();
-        post.id = docSnap.id;
-        const postHTML = createPostHTML(post);
-        postsContainer.appendChild(postHTML);
-    });
-}
+        function toggleComments(postId) {
+            const commentsSection = document.getElementById(`comments-${postId}`);
+            commentsSection.classList.toggle('hidden');
+        }
 
-// Like/unlike a post
-async function likePost(postId) {
-    const postRef = doc(db, "posts", postId);
-    const postSnap = await getDoc(postRef);
-    if (!postSnap.exists()) return;
-    const post = postSnap.data();
+        function addComment(postId) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            const content = input.value.trim();
+            
+            if (!content) return;
+            
+            const post = academicData.posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            if (!post.comments) post.comments = [];
+            
+            const comment = {
+                id: Date.now().toString(),
+                content: content,
+                author: currentUser.name,
+                authorId: currentUser.id,
+                authorAvatar: currentUser.avatar,
+                authorProfilePicture: currentUser.profilePicture,
+                date: new Date().toLocaleDateString('ar-SA'),
+                timestamp: new Date().toISOString()
+            };
+            
+            post.comments.push(comment);
+            saveData();
+            
+            // Update comments display
+            const commentsList = document.getElementById(`comments-list-${postId}`);
+            commentsList.innerHTML += createCommentHTML(comment);
+            
+            input.value = '';
+            logActivity('comment_add', `تعليق على منشور: ${postId}`);
+        }
 
-    if (!post.likedBy) post.likedBy = [];
+        function sharePost(postId) {
+            // Simple share functionality
+            const post = academicData.posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            const shareText = `${post.content}\n\n- ${post.author}\nمن المنصة الأكاديمية - لجنة الطب والجراحة البيطرية`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'منشور من المنصة الأكاديمية',
+                    text: shareText
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(shareText).then(() => {
+                    alert('تم نسخ المنشور للحافظة!');
+                });
+            }
+            
+            logActivity('post_share', `مشاركة منشور: ${postId}`);
+        }
 
-    if (post.likedBy.includes(currentUser.uid)) {
-        // Unlike
-        await updateDoc(postRef, {
-            likedBy: arrayRemove(currentUser.uid),
-            likes: (post.likes || 1) - 1
-        });
-    } else {
-        // Like
-        await updateDoc(postRef, {
-            likedBy: arrayUnion(currentUser.uid),
-            likes: (post.likes || 0) + 1
-        });
-    }
+        function deletePost(postId) {
+            if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
+                academicData.posts = academicData.posts.filter(p => p.id !== postId);
+                saveData();
+                loadPosts();
+                logActivity('post_delete', `حذف منشور: ${postId}`);
+            }
+        }
 
-    logActivity('post_like', `تفاعل مع منشور: ${postId}`);
-    loadPosts();
-}
-
-// Vote in poll
-async function voteInPoll(postId, optionIndex) {
-    const postRef = doc(db, "posts", postId);
-    const postSnap = await getDoc(postRef);
-    if (!postSnap.exists()) return;
-    const post = postSnap.data();
-
-    const alreadyVoted = post.pollOptions?.some(option => option.voters?.includes(currentUser.uid));
-    if (alreadyVoted) {
-        alert('لقد صوتت بالفعل في هذا الاستطلاع');
-        return;
-    }
-
-    const votersPath = `pollOptions.${optionIndex}.voters`;
-    const votesPath = `pollOptions.${optionIndex}.votes`;
-    await updateDoc(postRef, {
-        [votersPath]: arrayUnion(currentUser.uid),
-        [votesPath]: (post.pollOptions[optionIndex].votes || 0) + 1
-    });
-
-    logActivity('poll_vote', `تصويت في استطلاع: ${postId}`);
-    loadPosts();
-}
-
-// Add comment
-async function addComment(postId) {
-    const input = document.getElementById(`comment-input-${postId}`);
-    const content = input.value.trim();
-    if (!content) return;
-
-    const postRef = doc(db, "posts", postId);
-    const postSnap = await getDoc(postRef);
-    if (!postSnap.exists()) return;
-
-    const comment = {
-        id: Date.now().toString(),
-        content: content,
-        author: currentUser.name,
-        authorId: currentUser.uid,
-        authorAvatar: currentUser.avatar,
-        date: new Date().toLocaleDateString('ar-SA'),
-        timestamp: new Date().toISOString()
-    };
-
-    await updateDoc(postRef, {
-        comments: arrayUnion(comment)
-    });
-
-    logActivity('comment_add', `تعليق على منشور: ${postId}`);
-    input.value = '';
-    loadPosts();
-}
-
-// Delete post
-async function deletePost(postId) {
-    if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
-        await deleteDoc(doc(db, "posts", postId));
-        logActivity('post_delete', `حذف منشور: ${postId}`);
-        loadPosts();
-    }
-}
-
-// Send chat message
-async function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
-    if (!message) return;
-
-    const chatId = "globalChat"; // مثال: دردشة عامة
-    const messagesCol = collection(db, "chats", chatId, "messages");
-
-    await addDoc(messagesCol, {
-        senderId: currentUser.uid,
-        senderName: currentUser.name,
-        senderAvatar: currentUser.avatar,
-        message: message,
-        timestamp: new Date().toISOString()
-    });
-
-    input.value = '';
-    logActivity('chat_message', `أرسل رسالة: ${message}`);
-}
-
-// Listen for chat messages (real-time)
-function listenChat() {
-    const chatId = "globalChat";
-    const messagesCol = collection(db, "chats", chatId, "messages");
-    const q = query(messagesCol, orderBy("timestamp", "asc"));
-
-    onSnapshot(q, snapshot => {
-        const messagesContainer = document.getElementById('chatMessages');
-        messagesContainer.innerHTML = '';
-        snapshot.forEach(docSnap => {
-            const msg = docSnap.data();
-            const messageDiv = document.createElement('div');
-            messageDiv.className = msg.senderId === currentUser.uid
-                ? 'flex items-start space-x-3 space-x-reverse justify-end'
-                : 'flex items-start space-x-3 space-x-reverse';
-
-            messageDiv.innerHTML = `
-                <div class="${msg.senderId === currentUser.uid ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'} rounded-lg p-3 max-w-xs">
-                    <div class="text-sm font-medium">${msg.senderName}</div>
-                    <div class="text-sm">${msg.message}</div>
-                    <div class="text-xs mt-1 opacity-75">${new Date(msg.timestamp).toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'})}</div>
-                </div>
-                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
-                    ${msg.senderAvatar}
-                </div>
-            `;
-            messagesContainer.appendChild(messageDiv);
-        });
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    });
-}
-
+        // Chat functions
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'flex items-start space-x-3 space-x-reverse justify-end';
+                
+                messageDiv.innerHTML = `
+                    <div class="bg-purple-600 text-white rounded-lg p-3 max-w-xs">
+                        <div class="text-sm font-medium">${currentUser.name}</div>
+                        <div class="text-sm">${message}</div>
+                        <div class="text-xs opacity-75 mt-1">${new Date().toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'})}</div>
+                    </div>
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
+                        ${currentUser.avatar}
+                    </div>
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                input.value = '';
+                
+                // Simulate admin response (in real app, this would be real-time)
+                setTimeout(() => {
+                    const adminResponse = document.createElement('div');
+                    adminResponse.className = 'flex items-start space-x-3 space-x-reverse';
+                    adminResponse.innerHTML = `
+                        <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                            إ
+                        </div>
+                        <div class="bg-purple-100 rounded-lg p-3 max-w-xs">
+                            <div class="text-sm font-medium text-purple-900">الإدارة</div>
+                            <div class="text-sm text-purple-700">شكراً لتواصلك معنا. سنقوم بالرد عليك في أقرب وقت ممكن.</div>
+                            <div class="text-xs text-purple-500 mt-1">${new Date().toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'})}</div>
+                        </div>
+                    `;
+                    messagesContainer.appendChild(adminResponse);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }, 2000);
+            }
+        }
 
         // Logo functions
         function showLogoSettings() {
@@ -3349,5 +3329,5 @@ function listenChat() {
             }
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977f8601a40232ae',t:'MTc1NjY3NDcxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977f9d47452032ae',t:'MTc1NjY3NTY3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
