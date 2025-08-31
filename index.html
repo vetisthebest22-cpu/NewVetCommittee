@@ -271,15 +271,16 @@
                     <!-- User Menu -->
                     <div class="flex items-center space-x-4 space-x-reverse">
                         <!-- Notifications -->
-                        <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-purple-600 transition-colors">
+                        <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-purple-600 transition-colors" onclick="showNotifications()">
                             <span class="text-xl">🔔</span>
-                            <span class="notification-badge absolute -top-1 -left-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">3</span>
+                            <span id="notificationCount" class="notification-badge absolute -top-1 -left-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
                         </button>
                         
                         <!-- User Profile -->
                         <div class="relative">
                             <button id="userMenuBtn" class="flex items-center space-x-2 space-x-reverse text-gray-700 hover:text-purple-600 transition-colors">
-                                <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                                <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                                    <img id="userProfilePic" src="" alt="" class="w-full h-full object-cover hidden">
                                     <span id="userAvatar">ط</span>
                                 </div>
                                 <span class="hidden md:block font-medium" id="userName">طالب الطب البيطري</span>
@@ -297,9 +298,9 @@
                                         <span>⚙️</span>
                                         <span>الإعدادات</span>
                                     </button>
-                                    <button onclick="showUserStats()" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 space-x-reverse">
-                                        <span>📊</span>
-                                        <span>إحصائياتي</span>
+                                    <button onclick="showProfilePictureModal()" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 space-x-reverse">
+                                        <span>📷</span>
+                                        <span>تغيير الصورة الشخصية</span>
                                     </button>
                                     <button id="logoSettingsBtn" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 space-x-reverse hidden" onclick="showLogoSettings()">
                                         <span>🖼️</span>
@@ -325,19 +326,17 @@
                 <div class="p-4">
                     <!-- Announcements Section -->
                     <div class="mb-6 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                        <h3 class="font-semibold text-purple-800 mb-2 flex items-center">
-                            <span class="mr-2">📢</span>
-                            الإعلانات الأكاديمية
-                        </h3>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-semibold text-purple-800 flex items-center">
+                                <span class="mr-2">📢</span>
+                                الإعلانات الأكاديمية
+                            </h3>
+                            <button id="editAnnouncementsBtn" class="hidden text-purple-600 hover:text-purple-800 text-sm" onclick="editAnnouncements()">
+                                ✏️ تعديل
+                            </button>
+                        </div>
                         <div class="space-y-2" id="sidebarAnnouncements">
-                            <div class="text-sm text-purple-700 bg-white rounded p-2 shadow-sm">
-                                <div class="font-medium">تحديث مواد السنة الثالثة</div>
-                                <div class="text-xs text-purple-600">تم إضافة محاضرات جديدة</div>
-                            </div>
-                            <div class="text-sm text-purple-700 bg-white rounded p-2 shadow-sm">
-                                <div class="font-medium">موعد الامتحانات</div>
-                                <div class="text-xs text-purple-600">جدول الامتحانات النهائية</div>
-                            </div>
+                            <!-- Announcements will be loaded here -->
                         </div>
                     </div>
 
@@ -512,9 +511,9 @@
                         </ol>
                     </nav>
 
-                    <!-- Add Subject Button -->
+                    <!-- Add Subject Button (Admin Only) -->
                     <div class="mb-6">
-                        <button id="addSubjectBtn" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-md flex items-center space-x-2 space-x-reverse">
+                        <button id="addSubjectBtn" class="hidden px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-md flex items-center space-x-2 space-x-reverse">
                             <span>➕</span>
                             <span>إضافة مادة جديدة</span>
                         </button>
@@ -577,8 +576,8 @@
                         </div>
                     </div>
 
-                    <!-- Upload Area -->
-                    <div class="bg-white rounded-lg shadow-md p-6 mb-6 border border-gray-100">
+                    <!-- Upload Area (Admin Only) -->
+                    <div id="uploadSection" class="hidden bg-white rounded-lg shadow-md p-6 mb-6 border border-gray-100">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">رفع ملف جديد</h3>
                         <div class="file-upload-area rounded-lg p-8 text-center cursor-pointer" id="uploadArea">
                             <input type="file" id="fileInput" class="hidden" multiple accept=".pdf,.mp3,.mp4,.doc,.docx,.ppt,.pptx">
@@ -622,7 +621,15 @@
         <!-- Posts Section -->
         <div id="postsSection" class="hidden p-6 bg-gray-50 min-h-screen">
             <div class="max-w-4xl mx-auto">
-                <!-- Create Post (Admin Only) -->
+                <!-- Create Post Button -->
+                <div class="mb-6">
+                    <button id="createPostBtn" class="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-md flex items-center justify-center space-x-2 space-x-reverse" onclick="showCreatePost()">
+                        <span>✏️</span>
+                        <span>إنشاء منشور جديد</span>
+                    </button>
+                </div>
+
+                <!-- Create Post Form -->
                 <div id="createPostSection" class="hidden bg-white rounded-lg shadow-md p-6 mb-6 border border-gray-100">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">إنشاء منشور جديد</h3>
                     
@@ -1036,6 +1043,72 @@
         </div>
     </div>
 
+    <!-- Edit Announcements Modal -->
+    <div id="editAnnouncementsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 popup-overlay z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">📢 تعديل الإعلانات الأكاديمية</h3>
+                
+                <div class="space-y-4 mb-6">
+                    <div id="announcementsList">
+                        <!-- Announcements will be loaded here -->
+                    </div>
+                    
+                    <button onclick="addNewAnnouncement()" class="w-full py-2 px-4 border-2 border-dashed border-purple-300 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors">
+                        ➕ إضافة إعلان جديد
+                    </button>
+                </div>
+                
+                <div class="flex space-x-3 space-x-reverse">
+                    <button onclick="saveAnnouncements()" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-medium">
+                        💾 حفظ التغييرات
+                    </button>
+                    <button onclick="closeModal('editAnnouncementsModal')" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium">
+                        إلغاء
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Picture Modal -->
+    <div id="profilePictureModal" class="hidden fixed inset-0 bg-black bg-opacity-50 popup-overlay z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">📷 تغيير الصورة الشخصية</h3>
+                
+                <div class="space-y-4">
+                    <div class="text-center">
+                        <div class="w-24 h-24 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden">
+                            <img id="profilePreview" src="" alt="" class="w-full h-full object-cover hidden">
+                            <span id="profilePreviewDefault" class="text-white text-2xl">👤</span>
+                        </div>
+                        <p class="text-sm text-gray-600">الصورة الحالية</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">رفع صورة جديدة</label>
+                        <input type="file" id="profilePictureInput" accept="image/*" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <p class="text-xs text-gray-500 mt-1">يفضل الصور المربعة بحجم 200x200 بكسل أو أكبر</p>
+                    </div>
+                    
+                    <div class="flex space-x-3 space-x-reverse">
+                        <button onclick="updateProfilePicture()" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-medium">
+                            💾 حفظ الصورة
+                        </button>
+                        <button onclick="removeProfilePicture()" class="px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium">
+                            🗑️ إزالة
+                        </button>
+                        <button onclick="closeModal('profilePictureModal')" class="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">
+                            إلغاء
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Exam Modal -->
     <div id="addExamModal" class="hidden fixed inset-0 bg-black bg-opacity-50 popup-overlay z-50">
         <div class="flex items-center justify-center min-h-screen p-4">
@@ -1118,6 +1191,20 @@
             userProgress: {},
             bookmarks: {},
             favorites: {},
+            announcements: [
+                {
+                    id: '1',
+                    title: 'تحديث مواد السنة الثالثة',
+                    description: 'تم إضافة محاضرات جديدة',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: '2',
+                    title: 'موعد الامتحانات',
+                    description: 'جدول الامتحانات النهائية',
+                    createdAt: new Date().toISOString()
+                }
+            ],
             settings: {
                 logo: null
             }
@@ -1272,14 +1359,7 @@
                 showMainPlatform();
                 showWelcomePopup(currentUser.name);
                 
-                // Show admin features if admin
-                if (isAdmin) {
-                    document.getElementById('adminTab').classList.remove('hidden');
-                    document.getElementById('logoSettingsBtn').classList.remove('hidden');
-                    document.getElementById('createPostSection').classList.remove('hidden');
-                    document.getElementById('addSubjectBtn').classList.remove('hidden');
-                    document.getElementById('addExamBtn').classList.remove('hidden');
-                }
+
             }
         }
 
@@ -1351,8 +1431,31 @@
             // Update user info
             document.getElementById('userName').textContent = currentUser.name;
             document.getElementById('userFullName').textContent = currentUser.name;
-            document.getElementById('userYear').textContent = `السنة ${getYearName(currentUser.year)}`;
+            document.getElementById('userYear').textContent = currentUser.year ? `السنة ${getYearName(currentUser.year)}` : 'المدير العام';
             document.getElementById('userAvatar').textContent = currentUser.avatar;
+            
+            // Show admin features if admin
+            if (currentUser.isAdmin) {
+                document.getElementById('adminTab').classList.remove('hidden');
+                document.getElementById('logoSettingsBtn').classList.remove('hidden');
+                document.getElementById('addSubjectBtn').classList.remove('hidden');
+                document.getElementById('addExamBtn').classList.remove('hidden');
+                document.getElementById('uploadSection').classList.remove('hidden');
+                document.getElementById('editAnnouncementsBtn').classList.remove('hidden');
+            }
+            
+            // Load user profile picture
+            if (currentUser.profilePicture) {
+                document.getElementById('userProfilePic').src = currentUser.profilePicture;
+                document.getElementById('userProfilePic').classList.remove('hidden');
+                document.getElementById('userAvatar').classList.add('hidden');
+            }
+            
+            // Load announcements
+            loadAnnouncements();
+            
+            // Update notification count
+            updateNotificationCount();
         }
 
         // Academic year functions
@@ -1433,10 +1536,7 @@
                     <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center">
                         <span class="text-white text-xl">📚</span>
                     </div>
-                    <button onclick="event.stopPropagation(); deleteSubject('${subject.id}')" 
-                            class="text-red-500 hover:text-red-700 text-sm">
-                        🗑️
-                    </button>
+                    ${currentUser && currentUser.isAdmin ? `<button onclick="event.stopPropagation(); deleteSubject('${subject.id}')" class="text-red-500 hover:text-red-700 text-sm">🗑️</button>` : ''}
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">${subject.name}</h3>
                 <p class="text-gray-600 text-sm mb-4">${subject.description || 'لا يوجد وصف'}</p>
@@ -1973,7 +2073,188 @@
             }
         }
 
+        // Announcements functions
+        function loadAnnouncements() {
+            const container = document.getElementById('sidebarAnnouncements');
+            container.innerHTML = '';
+            
+            academicData.announcements.forEach(announcement => {
+                const announcementDiv = document.createElement('div');
+                announcementDiv.className = 'text-sm text-purple-700 bg-white rounded p-2 shadow-sm';
+                announcementDiv.innerHTML = `
+                    <div class="font-medium">${announcement.title}</div>
+                    <div class="text-xs text-purple-600">${announcement.description}</div>
+                `;
+                container.appendChild(announcementDiv);
+            });
+        }
+
+        function editAnnouncements() {
+            const modal = document.getElementById('editAnnouncementsModal');
+            const list = document.getElementById('announcementsList');
+            
+            list.innerHTML = '';
+            
+            academicData.announcements.forEach((announcement, index) => {
+                const announcementDiv = document.createElement('div');
+                announcementDiv.className = 'border border-gray-200 rounded-lg p-4';
+                announcementDiv.innerHTML = `
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
+                            <input type="text" value="${announcement.title}" 
+                                   class="announcement-title w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                   data-index="${index}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
+                            <input type="text" value="${announcement.description}" 
+                                   class="announcement-description w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                                   data-index="${index}">
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="removeAnnouncement(${index})" class="text-red-600 hover:text-red-800 text-sm">
+                                🗑️ حذف
+                            </button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(announcementDiv);
+            });
+            
+            modal.classList.remove('hidden');
+        }
+
+        function addNewAnnouncement() {
+            const newAnnouncement = {
+                id: Date.now().toString(),
+                title: 'إعلان جديد',
+                description: 'وصف الإعلان',
+                createdAt: new Date().toISOString()
+            };
+            
+            academicData.announcements.push(newAnnouncement);
+            editAnnouncements(); // Refresh the modal
+        }
+
+        function removeAnnouncement(index) {
+            if (confirm('هل أنت متأكد من حذف هذا الإعلان؟')) {
+                academicData.announcements.splice(index, 1);
+                editAnnouncements(); // Refresh the modal
+            }
+        }
+
+        function saveAnnouncements() {
+            const titleInputs = document.querySelectorAll('.announcement-title');
+            const descriptionInputs = document.querySelectorAll('.announcement-description');
+            
+            titleInputs.forEach((input, index) => {
+                if (academicData.announcements[index]) {
+                    academicData.announcements[index].title = input.value.trim();
+                }
+            });
+            
+            descriptionInputs.forEach((input, index) => {
+                if (academicData.announcements[index]) {
+                    academicData.announcements[index].description = input.value.trim();
+                }
+            });
+            
+            saveData();
+            loadAnnouncements();
+            closeModal('editAnnouncementsModal');
+            
+            logActivity('announcements_update', 'تحديث الإعلانات الأكاديمية');
+            alert('تم حفظ التغييرات بنجاح!');
+        }
+
+        // Profile picture functions
+        function showProfilePictureModal() {
+            // Load current profile picture
+            if (currentUser.profilePicture) {
+                document.getElementById('profilePreview').src = currentUser.profilePicture;
+                document.getElementById('profilePreview').classList.remove('hidden');
+                document.getElementById('profilePreviewDefault').classList.add('hidden');
+            } else {
+                document.getElementById('profilePreview').classList.add('hidden');
+                document.getElementById('profilePreviewDefault').classList.remove('hidden');
+            }
+            
+            document.getElementById('profilePictureModal').classList.remove('hidden');
+        }
+
+        function updateProfilePicture() {
+            const input = document.getElementById('profilePictureInput');
+            const file = input.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageUrl = e.target.result;
+                    
+                    // Update user data
+                    currentUser.profilePicture = imageUrl;
+                    
+                    // Update in users array
+                    const userIndex = academicData.users.findIndex(u => u.id === currentUser.id);
+                    if (userIndex !== -1) {
+                        academicData.users[userIndex].profilePicture = imageUrl;
+                    }
+                    
+                    // Update UI
+                    document.getElementById('userProfilePic').src = imageUrl;
+                    document.getElementById('userProfilePic').classList.remove('hidden');
+                    document.getElementById('userAvatar').classList.add('hidden');
+                    
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    saveData();
+                    
+                    closeModal('profilePictureModal');
+                    
+                    logActivity('profile_picture_update', 'تحديث الصورة الشخصية');
+                    alert('تم تحديث الصورة الشخصية بنجاح!');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeProfilePicture() {
+            if (confirm('هل أنت متأكد من إزالة الصورة الشخصية؟')) {
+                currentUser.profilePicture = null;
+                
+                // Update in users array
+                const userIndex = academicData.users.findIndex(u => u.id === currentUser.id);
+                if (userIndex !== -1) {
+                    academicData.users[userIndex].profilePicture = null;
+                }
+                
+                // Update UI
+                document.getElementById('userProfilePic').classList.add('hidden');
+                document.getElementById('userAvatar').classList.remove('hidden');
+                
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                saveData();
+                
+                closeModal('profilePictureModal');
+                
+                logActivity('profile_picture_remove', 'إزالة الصورة الشخصية');
+                alert('تم إزالة الصورة الشخصية!');
+            }
+        }
+
         // Posts functions
+        function showCreatePost() {
+            document.getElementById('createPostBtn').classList.add('hidden');
+            document.getElementById('createPostSection').classList.remove('hidden');
+        }
+
+        function cancelCreatePost() {
+            document.getElementById('createPostBtn').classList.remove('hidden');
+            document.getElementById('createPostSection').classList.add('hidden');
+            document.getElementById('createPostForm').reset();
+            selectPostType('normal');
+        }
+
         function selectPostType(type) {
             currentPostType = type;
             
@@ -2004,6 +2285,84 @@
             input.placeholder = `الخيار ${choiceCount}`;
             
             pollChoices.appendChild(input);
+        }
+
+        // Handle create post form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const createPostForm = document.getElementById('createPostForm');
+            if (createPostForm) {
+                createPostForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    handleCreatePost();
+                });
+            }
+        });
+
+        function handleCreatePost() {
+            const content = document.getElementById('postContent').value.trim();
+            const targetYear = document.getElementById('targetYear').value;
+            const priority = document.getElementById('postPriority').value;
+            
+            if (!content) {
+                alert('يرجى كتابة محتوى المنشور');
+                return;
+            }
+            
+            const post = {
+                id: Date.now().toString(),
+                type: currentPostType,
+                content: content,
+                author: currentUser.name,
+                authorId: currentUser.id,
+                authorAvatar: currentUser.avatar,
+                authorProfilePicture: currentUser.profilePicture,
+                targetYear: targetYear,
+                priority: priority,
+                date: new Date().toLocaleDateString('ar-SA'),
+                timestamp: new Date().toISOString(),
+                likes: 0,
+                likedBy: [],
+                comments: [],
+                status: currentUser.status || 'متاح'
+            };
+            
+            // Handle poll options
+            if (currentPostType === 'poll') {
+                const pollChoices = document.querySelectorAll('.poll-choice');
+                const options = [];
+                
+                pollChoices.forEach(choice => {
+                    const text = choice.value.trim();
+                    if (text) {
+                        options.push({
+                            text: text,
+                            votes: 0,
+                            voters: []
+                        });
+                    }
+                });
+                
+                if (options.length < 2) {
+                    alert('يجب إضافة خيارين على الأقل للاستطلاع');
+                    return;
+                }
+                
+                post.pollOptions = options;
+            }
+            
+            academicData.posts.unshift(post); // Add to beginning
+            saveData();
+            
+            // Reset form
+            cancelCreatePost();
+            
+            // Refresh posts
+            loadPosts();
+            
+            // Log activity
+            logActivity('post_create', `إنشاء منشور: ${currentPostType}`);
+            
+            alert('تم نشر المنشور بنجاح!');
         }
 
         function loadPosts() {
@@ -2049,18 +2408,30 @@
                 announcement: '📢'
             };
             
+            // Check if user has liked this post
+            const isLiked = post.likedBy && post.likedBy.includes(currentUser.id);
+            
             postDiv.innerHTML = `
                 <div class="flex items-start justify-between mb-4">
                     <div class="flex items-center space-x-3 space-x-reverse">
-                        <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                            ${post.author.charAt(0)}
+                        <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold overflow-hidden">
+                            ${post.authorProfilePicture ? 
+                                `<img src="${post.authorProfilePicture}" alt="" class="w-full h-full object-cover">` : 
+                                `<span>${post.authorAvatar || post.author.charAt(0)}</span>`
+                            }
                         </div>
                         <div>
-                            <div class="font-semibold text-gray-900">${post.author}</div>
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <span class="font-semibold text-gray-900">${post.author}</span>
+                                ${post.status ? `<span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">${post.status}</span>` : ''}
+                            </div>
                             <div class="text-sm text-gray-500">${post.date} • ${typeIcons[post.type]}</div>
                         </div>
                     </div>
-                    ${post.priority !== 'normal' ? `<span class="px-2 py-1 text-xs rounded ${post.priority === 'urgent' ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800'}">${post.priority === 'urgent' ? 'عاجل' : 'مهم'}</span>` : ''}
+                    <div class="flex items-center space-x-2 space-x-reverse">
+                        ${post.priority !== 'normal' ? `<span class="px-2 py-1 text-xs rounded ${post.priority === 'urgent' ? 'bg-red-200 text-red-800' : 'bg-orange-200 text-orange-800'}">${post.priority === 'urgent' ? 'عاجل' : 'مهم'}</span>` : ''}
+                        ${currentUser && (currentUser.isAdmin || currentUser.id === post.authorId) ? `<button onclick="deletePost('${post.id}')" class="text-red-500 hover:text-red-700 text-sm">🗑️</button>` : ''}
+                    </div>
                 </div>
                 
                 <div class="mb-4">
@@ -2071,17 +2442,36 @@
                 
                 <div class="flex items-center justify-between pt-4 border-t border-gray-200">
                     <div class="flex items-center space-x-4 space-x-reverse">
-                        <button onclick="likePost('${post.id}')" class="flex items-center space-x-1 space-x-reverse text-gray-600 hover:text-purple-600">
-                            <span>👍</span>
+                        <button onclick="likePost('${post.id}')" class="flex items-center space-x-1 space-x-reverse ${isLiked ? 'text-purple-600' : 'text-gray-600'} hover:text-purple-600 transition-colors">
+                            <span>${isLiked ? '👍' : '🤍'}</span>
                             <span>${post.likes || 0}</span>
                         </button>
                         <button onclick="toggleComments('${post.id}')" class="flex items-center space-x-1 space-x-reverse text-gray-600 hover:text-purple-600">
                             <span>💬</span>
                             <span>${post.comments ? post.comments.length : 0}</span>
                         </button>
+                        <button onclick="sharePost('${post.id}')" class="flex items-center space-x-1 space-x-reverse text-gray-600 hover:text-purple-600">
+                            <span>📤</span>
+                            <span>مشاركة</span>
+                        </button>
                     </div>
                     <div class="text-sm text-gray-500">
                         ${post.targetYear === 'all' ? 'جميع السنوات' : `السنة ${getYearName(post.targetYear)}`}
+                    </div>
+                </div>
+                
+                <!-- Comments Section -->
+                <div id="comments-${post.id}" class="hidden mt-4 pt-4 border-t border-gray-200">
+                    <div class="space-y-3" id="comments-list-${post.id}">
+                        ${post.comments ? post.comments.map(comment => createCommentHTML(comment)).join('') : ''}
+                    </div>
+                    <div class="mt-4 flex space-x-2 space-x-reverse">
+                        <input type="text" id="comment-input-${post.id}" placeholder="اكتب تعليقاً..." 
+                               class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                               onkeypress="if(event.key==='Enter') addComment('${post.id}')">
+                        <button onclick="addComment('${post.id}')" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                            💬 تعليق
+                        </button>
                     </div>
                 </div>
             `;
@@ -2093,11 +2483,14 @@
             if (!post.pollOptions) return '';
             
             const totalVotes = post.pollOptions.reduce((sum, option) => sum + (option.votes || 0), 0);
+            const userVoted = post.pollOptions.some(option => option.voters && option.voters.includes(currentUser.id));
             
-            let pollHTML = '<div class="bg-gray-50 rounded-lg p-4 mb-4"><h4 class="font-medium text-gray-900 mb-3">نتائج الاستطلاع:</h4>';
+            let pollHTML = '<div class="bg-gray-50 rounded-lg p-4 mb-4"><h4 class="font-medium text-gray-900 mb-3">استطلاع الرأي:</h4>';
             
             post.pollOptions.forEach((option, index) => {
                 const percentage = totalVotes > 0 ? Math.round((option.votes || 0) / totalVotes * 100) : 0;
+                const userVotedThis = option.voters && option.voters.includes(currentUser.id);
+                
                 pollHTML += `
                     <div class="mb-3">
                         <div class="flex justify-between items-center mb-1">
@@ -2107,13 +2500,157 @@
                         <div class="w-full bg-gray-200 rounded-full h-2">
                             <div class="bg-purple-600 h-2 rounded-full" style="width: ${percentage}%"></div>
                         </div>
-                        <button onclick="voteInPoll('${post.id}', ${index})" class="mt-1 text-xs text-purple-600 hover:text-purple-800">صوت لهذا الخيار</button>
+                        ${!userVoted ? 
+                            `<button onclick="voteInPoll('${post.id}', ${index})" class="mt-1 text-xs text-purple-600 hover:text-purple-800">صوت لهذا الخيار</button>` :
+                            userVotedThis ? 
+                                `<span class="mt-1 text-xs text-green-600">✓ صوتك</span>` : 
+                                `<span class="mt-1 text-xs text-gray-400">لقد صوتت بالفعل</span>`
+                        }
                     </div>
                 `;
             });
             
             pollHTML += `<div class="text-xs text-gray-500 mt-2">إجمالي الأصوات: ${totalVotes}</div></div>`;
             return pollHTML;
+        }
+
+        function createCommentHTML(comment) {
+            return `
+                <div class="flex items-start space-x-3 space-x-reverse">
+                    <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold overflow-hidden">
+                        ${comment.authorProfilePicture ? 
+                            `<img src="${comment.authorProfilePicture}" alt="" class="w-full h-full object-cover">` : 
+                            `<span>${comment.authorAvatar || comment.author.charAt(0)}</span>`
+                        }
+                    </div>
+                    <div class="flex-1 bg-gray-50 rounded-lg p-3">
+                        <div class="flex items-center space-x-2 space-x-reverse mb-1">
+                            <span class="text-sm font-medium text-gray-900">${comment.author}</span>
+                            <span class="text-xs text-gray-500">${comment.date}</span>
+                        </div>
+                        <p class="text-sm text-gray-700">${comment.content}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Post interaction functions
+        function likePost(postId) {
+            const post = academicData.posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            if (!post.likedBy) post.likedBy = [];
+            
+            const userIndex = post.likedBy.indexOf(currentUser.id);
+            if (userIndex > -1) {
+                // Unlike
+                post.likedBy.splice(userIndex, 1);
+                post.likes = Math.max(0, (post.likes || 0) - 1);
+            } else {
+                // Like
+                post.likedBy.push(currentUser.id);
+                post.likes = (post.likes || 0) + 1;
+            }
+            
+            saveData();
+            loadPosts(); // Refresh posts
+            logActivity('post_like', `تفاعل مع منشور: ${postId}`);
+        }
+
+        function voteInPoll(postId, optionIndex) {
+            const post = academicData.posts.find(p => p.id === postId);
+            if (!post || !post.pollOptions) return;
+            
+            // Check if user already voted
+            const alreadyVoted = post.pollOptions.some(option => 
+                option.voters && option.voters.includes(currentUser.id)
+            );
+            
+            if (alreadyVoted) {
+                alert('لقد صوتت بالفعل في هذا الاستطلاع');
+                return;
+            }
+            
+            // Add vote
+            if (!post.pollOptions[optionIndex].voters) {
+                post.pollOptions[optionIndex].voters = [];
+            }
+            
+            post.pollOptions[optionIndex].voters.push(currentUser.id);
+            post.pollOptions[optionIndex].votes = (post.pollOptions[optionIndex].votes || 0) + 1;
+            
+            saveData();
+            loadPosts(); // Refresh posts
+            logActivity('poll_vote', `تصويت في استطلاع: ${postId}`);
+        }
+
+        function toggleComments(postId) {
+            const commentsSection = document.getElementById(`comments-${postId}`);
+            commentsSection.classList.toggle('hidden');
+        }
+
+        function addComment(postId) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            const content = input.value.trim();
+            
+            if (!content) return;
+            
+            const post = academicData.posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            if (!post.comments) post.comments = [];
+            
+            const comment = {
+                id: Date.now().toString(),
+                content: content,
+                author: currentUser.name,
+                authorId: currentUser.id,
+                authorAvatar: currentUser.avatar,
+                authorProfilePicture: currentUser.profilePicture,
+                date: new Date().toLocaleDateString('ar-SA'),
+                timestamp: new Date().toISOString()
+            };
+            
+            post.comments.push(comment);
+            saveData();
+            
+            // Update comments display
+            const commentsList = document.getElementById(`comments-list-${postId}`);
+            commentsList.innerHTML += createCommentHTML(comment);
+            
+            input.value = '';
+            logActivity('comment_add', `تعليق على منشور: ${postId}`);
+        }
+
+        function sharePost(postId) {
+            // Simple share functionality
+            const post = academicData.posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            const shareText = `${post.content}\n\n- ${post.author}\nمن المنصة الأكاديمية - لجنة الطب والجراحة البيطرية`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'منشور من المنصة الأكاديمية',
+                    text: shareText
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(shareText).then(() => {
+                    alert('تم نسخ المنشور للحافظة!');
+                });
+            }
+            
+            logActivity('post_share', `مشاركة منشور: ${postId}`);
+        }
+
+        function deletePost(postId) {
+            if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
+                academicData.posts = academicData.posts.filter(p => p.id !== postId);
+                saveData();
+                loadPosts();
+                logActivity('post_delete', `حذف منشور: ${postId}`);
+            }
         }
 
         // Chat functions
@@ -2495,10 +3032,20 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">الحالة</label>
                                 <select id="settingsStatus" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                                    <option value="متاح" ${currentUser.status === 'متاح' ? 'selected' : ''}>متاح</option>
-                                    <option value="مشغول" ${currentUser.status === 'مشغول' ? 'selected' : ''}>مشغول</option>
-                                    <option value="في امتحان" ${currentUser.status === 'في امتحان' ? 'selected' : ''}>في امتحان</option>
+                                    <option value="متاح" ${currentUser.status === 'متاح' ? 'selected' : ''}>🟢 متاح</option>
+                                    <option value="مشغول" ${currentUser.status === 'مشغول' ? 'selected' : ''}>🟡 مشغول</option>
+                                    <option value="في امتحان" ${currentUser.status === 'في امتحان' ? 'selected' : ''}>🔴 في امتحان</option>
+                                    <option value="في المكتبة" ${currentUser.status === 'في المكتبة' ? 'selected' : ''}>📚 في المكتبة</option>
+                                    <option value="في المختبر" ${currentUser.status === 'في المختبر' ? 'selected' : ''}>🔬 في المختبر</option>
+                                    <option value="غير متاح" ${currentUser.status === 'غير متاح' ? 'selected' : ''}>⚫ غير متاح</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">رسالة الحالة (اختياري)</label>
+                                <input type="text" id="settingsStatusMessage" value="${currentUser.statusMessage || ''}" 
+                                       placeholder="مثال: أدرس للامتحان النهائي..."
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                             </div>
                             
                             <div class="bg-purple-50 rounded-lg p-4">
@@ -2506,15 +3053,16 @@
                                 <div class="text-sm text-purple-700 space-y-1">
                                     <div>المفضلة: ${academicData.favorites[currentUser.id] ? academicData.favorites[currentUser.id].length : 0} ملف</div>
                                     <div>الإشارات المرجعية: ${academicData.bookmarks[currentUser.id] ? academicData.bookmarks[currentUser.id].length : 0} ملف</div>
-                                    <div>تاريخ التسجيل: ${new Date(currentUser.registrationDate).toLocaleDateString('ar-SA')}</div>
+                                    <div>المنشورات: ${academicData.posts.filter(p => p.authorId === currentUser.id).length} منشور</div>
+                                    <div>التعليقات: ${academicData.posts.reduce((count, post) => count + (post.comments ? post.comments.filter(c => c.authorId === currentUser.id).length : 0), 0)} تعليق</div>
                                 </div>
                             </div>
                             
-                            <div class="flex space-x-3 space-x-reverse">
+                            <div class="flex space-x-2 space-x-reverse">
                                 <button onclick="saveUserSettings()" class="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-medium">
-                                    💾 حفظ التغييرات
+                                    💾 حفظ
                                 </button>
-                                <button onclick="showFavorites()" class="flex-1 bg-red-100 text-red-700 py-3 rounded-lg hover:bg-red-200 font-medium">
+                                <button onclick="showFavorites()" class="px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium">
                                     ❤️ المفضلة
                                 </button>
                                 <button onclick="closeUserSettings()" class="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">
@@ -2533,10 +3081,12 @@
         function saveUserSettings() {
             const name = document.getElementById('settingsName').value.trim();
             const status = document.getElementById('settingsStatus').value;
+            const statusMessage = document.getElementById('settingsStatusMessage').value.trim();
             
             if (name) {
                 currentUser.name = name;
                 currentUser.status = status;
+                currentUser.statusMessage = statusMessage;
                 currentUser.avatar = name.charAt(0).toUpperCase();
                 
                 // Update in users array
@@ -2548,7 +3098,9 @@
                 // Update UI
                 document.getElementById('userName').textContent = name;
                 document.getElementById('userFullName').textContent = name;
-                document.getElementById('userAvatar').textContent = currentUser.avatar;
+                if (!currentUser.profilePicture) {
+                    document.getElementById('userAvatar').textContent = currentUser.avatar;
+                }
                 
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 saveData();
@@ -2648,21 +3200,120 @@
             }
         }
 
-        function showUserStats() {
-            const userProgress = academicData.userProgress[currentUser.id] || {};
-            const userBookmarks = academicData.bookmarks[currentUser.id] || [];
-            const userFavorites = academicData.favorites[currentUser.id] || [];
+        // Notification functions
+        function updateNotificationCount() {
+            if (!currentUser) return;
             
-            const totalProgress = Object.values(userProgress).reduce((sum, progress) => sum + progress, 0);
-            const avgProgress = Object.keys(userProgress).length > 0 ? Math.round(totalProgress / Object.keys(userProgress).length) : 0;
+            // Get unread notifications for current user
+            let unreadCount = 0;
             
-            alert(`📊 إحصائياتك الشخصية:
+            academicData.notifications.forEach(notification => {
+                // Check if notification is for this user's year or all years
+                if (notification.targetYear === 'all' || notification.targetYear == currentUser.year) {
+                    // Check if user has read this notification
+                    const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${currentUser.id}`) || '[]');
+                    if (!readNotifications.includes(notification.id)) {
+                        unreadCount++;
+                    }
+                }
+            });
+            
+            const countElement = document.getElementById('notificationCount');
+            if (countElement) {
+                countElement.textContent = unreadCount;
+                countElement.style.display = unreadCount > 0 ? 'flex' : 'none';
+            }
+        }
 
-📈 متوسط التقدم: ${avgProgress}%
-🔖 الإشارات المرجعية: ${userBookmarks.length}
-❤️ الملفات المفضلة: ${userFavorites.length}
-📅 تاريخ التسجيل: ${new Date(currentUser.registrationDate).toLocaleDateString('ar-SA')}
-🕐 آخر دخول: ${new Date(currentUser.lastLogin).toLocaleDateString('ar-SA')}`);
+        function showNotifications() {
+            if (!currentUser) return;
+            
+            // Get notifications for current user
+            const userNotifications = academicData.notifications.filter(notification => 
+                notification.targetYear === 'all' || notification.targetYear == currentUser.year
+            ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            const notificationsModal = document.createElement('div');
+            notificationsModal.className = 'fixed inset-0 bg-black bg-opacity-50 popup-overlay z-50';
+            notificationsModal.innerHTML = `
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-96 overflow-y-auto">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">🔔 الإشعارات</h3>
+                        
+                        <div class="space-y-3">
+                            ${userNotifications.length === 0 ? 
+                                '<div class="text-center py-8 text-gray-500"><div class="text-4xl mb-2">🔕</div><p>لا توجد إشعارات</p></div>' :
+                                userNotifications.map(notification => {
+                                    const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${currentUser.id}`) || '[]');
+                                    const isRead = readNotifications.includes(notification.id);
+                                    
+                                    return `
+                                        <div class="p-4 border border-gray-200 rounded-lg ${isRead ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'}">
+                                            <div class="flex items-start justify-between">
+                                                <div class="flex-1">
+                                                    <div class="flex items-center space-x-2 space-x-reverse mb-2">
+                                                        <h4 class="font-medium text-gray-900">${notification.title}</h4>
+                                                        ${!isRead ? '<span class="w-2 h-2 bg-blue-500 rounded-full"></span>' : ''}
+                                                    </div>
+                                                    <p class="text-sm text-gray-700 mb-2">${notification.message}</p>
+                                                    <div class="text-xs text-gray-500">
+                                                        ${new Date(notification.createdAt).toLocaleDateString('ar-SA')} • 
+                                                        ${new Date(notification.createdAt).toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'})}
+                                                    </div>
+                                                </div>
+                                                ${!isRead ? `<button onclick="markAsRead('${notification.id}')" class="text-xs text-blue-600 hover:text-blue-800">تم القراءة</button>` : ''}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')
+                            }
+                        </div>
+                        
+                        <div class="mt-6 flex space-x-3 space-x-reverse">
+                            <button onclick="markAllAsRead()" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">
+                                ✅ تم قراءة الكل
+                            </button>
+                            <button onclick="closeNotifications()" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium">
+                                إغلاق
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(notificationsModal);
+            notificationsModal.id = 'notificationsModal';
+        }
+
+        function markAsRead(notificationId) {
+            const readNotifications = JSON.parse(localStorage.getItem(`readNotifications_${currentUser.id}`) || '[]');
+            if (!readNotifications.includes(notificationId)) {
+                readNotifications.push(notificationId);
+                localStorage.setItem(`readNotifications_${currentUser.id}`, JSON.stringify(readNotifications));
+            }
+            
+            updateNotificationCount();
+            closeNotifications();
+            showNotifications(); // Refresh the modal
+        }
+
+        function markAllAsRead() {
+            const userNotifications = academicData.notifications.filter(notification => 
+                notification.targetYear === 'all' || notification.targetYear == currentUser.year
+            );
+            
+            const readNotifications = userNotifications.map(n => n.id);
+            localStorage.setItem(`readNotifications_${currentUser.id}`, JSON.stringify(readNotifications));
+            
+            updateNotificationCount();
+            closeNotifications();
+        }
+
+        function closeNotifications() {
+            const modal = document.getElementById('notificationsModal');
+            if (modal) {
+                modal.remove();
+            }
         }
 
         // Initialize the application
@@ -2678,5 +3329,5 @@
             }
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977f71f1c43932ae',t:'MTc1NjY3Mzg5Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977f8601a40232ae',t:'MTc1NjY3NDcxOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
